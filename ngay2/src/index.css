@@ -1,0 +1,10 @@
+.cardC {
+  max-width: 960px;
+  display: flex;
+  justify-content: center;
+  margin: 10px;
+}
+
+.btn {
+  margin-left: 10px;
+}
