@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<title>Bootstrap CRUD Data Table for Database with Modal Form</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto|Varela+Round">
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="style.css">
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+
+<script src="data.js"></script>
+
+<script>
+// --- LocalStorage CRUD helpers ---
+function getEmployeesFromStorage() {
+    let data = localStorage.getItem('employees');
+    if (data) return JSON.parse(data);
+    // If not in storage, use data.js and save to storage
+    localStorage.setItem('employees', JSON.stringify(Task));
+    return Task;
+}
+function setEmployeesToStorage(data) {
+    localStorage.setItem('employees', JSON.stringify(data));
+}
+
+// --- Render employee table ---
+function renderEmployeeTable() {
+    let data = getEmployeesFromStorage();
+    let tbody = '';
+    data.forEach((emp, idx) => {
+        let id = 'checkbox' + (idx + 1);
+        tbody += `
+        <tr>
+            
+            <td>${emp.title}</td>
+            <td>${emp.assignee}</td>
+            <td>${emp.email}</td>
+            <td>${emp.address}</td>
+            <td>${emp.phone}</td>
+            <td>
+                <a href="#editEmployeeModal" class="edit" data-toggle="modal"><i class="material-icons" data-toggle="tooltip" title="Edit">&#xE254;</i></a>
+                <a href="#deleteEmployeeModal" class="delete" data-toggle="modal"><i class="material-icons" data-toggle="tooltip" title="Delete">&#xE872;</i></a>
+            </td>
+        </tr>`;
+    });
+    $("table tbody").html(tbody);
+}
+
+$(document).ready(function(){
+    renderEmployeeTable();
+    // Activate tooltip
+    
+
+    // --- CRUD LOGIC ---
+
+    // Helper: Validate form fields
+    function validateEmployeeForm($modal) {
+        // Lấy giá trị các trường nhập
+        let name = $modal.find('input[type="text"]').eq(0).val().trim();
+        let email = $modal.find('input[type="email"]').val().trim();
+        let address = $modal.find('textarea').val().trim();
+        let phone = $modal.find('input[type="text"]').eq(1).val().trim();
+
+        // Regex kiểm tra email và số điện thoại
+        let emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        let phonePattern = /^0\d{9}$/; // Bắt đầu bằng 0, đủ 10 số
+
+        // Kiểm tra từng trường
+        if (!name) {
+            alert("Name is required.");
+            return false;
+        }
+        if (!email || !emailPattern.test(email)) {
+            alert("Valid email is required.");
+            return false;
+        }
+        if (!address) {
+            alert("Address is required.");
+            return false;
+        }
+        if (!phone || !phonePattern.test(phone)) {
+            alert("Phone must start with 0 and have exactly 10 digits.");
+            return false;
+        }
+        return true;
+    }
+
+    // Thêm nhân viên mới
+    $("#addEmployeeModal form").submit(function(e){				//chọn form nằm trong modal
+        e.preventDefault();
+        let $modal = $("#addEmployeeModal");
+        if (!validateEmployeeForm($modal)) return false;
+        let name = $modal.find('input[type="text"]').eq(0).val().trim();				//lấy dữ liệu từ input khi ng dùng nhập
+        let email = $modal.find('input[type="email"]').val().trim();
+        let address = $modal.find('textarea').val().trim();
+        let phone = $modal.find('input[type="text"]').eq(1).val().trim();
+
+        let data = getEmployeesFromStorage();
+
+        data.push({ name, email, address, phone });
+        setEmployeesToStorage(data);
+        renderEmployeeTable();
+
+        $modal.modal('hide');
+        $modal.find('form')[0].reset();				//reset các  input trong form
+        
+    });
+
+    // Sửa nhân viên: điền dữ liệu vào modal khi bấm Edit    lấy dữ liệu khi ng dùng ấn vào biểu tượng chỉnh sửa
+    let $rowBeingEdited = null;
+    $("table").on("click", ".edit", function(){
+        $rowBeingEdited = $(this).closest("tr");    //xác định dòng chứa nút có class là edit
+
+        let tds = $rowBeingEdited.find("td");       //lấy tất cả các ô td trong dòng đó
+
+        let $modal = $("#editEmployeeModal");
+        $modal.find('input[type="text"]').eq(0).val(tds.eq(1).text());  		// gán dữ liệu
+        $modal.find('input[type="email"]').val(tds.eq(2).text());
+        $modal.find('textarea').val(tds.eq(3).text());
+        $modal.find('input[type="text"]').eq(1).val(tds.eq(4).text());
+    });
+
+    // Lưu chỉnh sửa nhân viên											cập nhật dữ liệu
+    $("#editEmployeeModal form").submit(function(e){
+        e.preventDefault();
+        let $modal = $("#editEmployeeModal");
+        if (!validateEmployeeForm($modal)) return false;
+        let name = $modal.find('input[type="text"]').eq(0).val().trim();
+        let email = $modal.find('input[type="email"]').val().trim();
+        let address = $modal.find('textarea').val().trim();
+        let phone = $modal.find('input[type="text"]').eq(1).val().trim();
+        if ($rowBeingEdited) {
+            let idx = $rowBeingEdited.index();
+            let data = getEmployeesFromStorage();
+            data[idx] = { name, email, address, phone };
+            setEmployeesToStorage(data);
+            renderEmployeeTable();
+        }
+        $modal.modal('hide');
+    });
+
+    // Delete: Single row   dùng để thêm dòng đc chọn vào mảng deleteRows khi ng dùn click vào biểu tượng xóa
+    let deleteRows = [];
+    $("table").on("click", ".delete", function(){
+        deleteRows = [$(this).closest("tr")];
+    });
+
+
+    // Confirm Delete    					logic xóa
+    $("#deleteEmployeeModal form").submit(function(e){
+        e.preventDefault();
+        if (deleteRows.length === 0) {
+            alert("Please select at least one record to delete.");
+            return false;
+        }
+        let data = getEmployeesFromStorage();
+        deleteRows.forEach(function($row){
+            let nameToDelete = $row.find("td").eq(1).text().trim();
+            data = data.filter(emp => emp.name !== nameToDelete);
+        });
+        setEmployeesToStorage(data);
+        renderEmployeeTable();
+        deleteRows = [];
+        $("#deleteEmployeeModal").modal('hide');
+        
+    });
+
+    
+    
+});
+</script>
+</head>
+
+<body>
+<div class="container" style="min-width: 960px; margin-top:20px">
+        <div class="header">
+            <nav class="navbar navbar-expand navbar-dark bg-dark" aria-label="Second navbar example"> 
+                <div class="container-fluid"> 
+                    <a class="navbar-brand" href="#" style="padding-left: 12px;"><b>TLU</b></a> 
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsExample02" aria-controls="navbarsExample02" aria-expanded="false" aria-label="Toggle navigation"> 
+                        <span class="navbar-toggler-icon"></span>
+                    </button> 
+                    <div class="collapse navbar-collapse" id="navbarsExample02" style="justify-content: space-between;"> 
+                        <ul class="navbar-nav me-auto"> 
+                            <li class="nav-item"> 
+                                <a class="nav-link " aria-current="page" href="#">Trang chủ</a> 
+                            </li> 
+                            <li class="nav-item"> 
+                                <a class="nav-link active" href="#">Quản lý nhân viên</a> 
+                            </li> 
+                        </ul> 
+                        <form role="search" style="display: flex"> 
+                            <input class="form-control" type="search" placeholder="Nhập nội dung tìm kiếm" aria-label="Search"> 
+                            <button class="btn btn-dark" style=" margin-left:5px; border: 1px solid white">Tìm</button>
+                        </form> 
+                    </div> 
+                </div> 
+            </nav>
+        </div>
+</div>
+
+<div class="container-xl">
+	<div class="table-responsive">
+		<div class="table-wrapper">
+			<div class="table-title">
+				<div class="row">
+					<div class="col-sm-6">
+						<h2>Manage <b>Employees</b></h2>
+					</div>
+					<div class="col-sm-6">
+						<a href="#addEmployeeModal" class="btn btn-success" data-toggle="modal"><i class="material-icons">&#xE147;</i> <span>Add New Employee</span></a>
+						<a href="#deleteEmployeeModal" class="btn btn-danger" data-toggle="modal"><i class="material-icons">&#xE15C;</i> <span>Delete</span></a>						
+					</div>
+				</div>
+			</div>
+			<table class="table table-striped table-hover">
+				<thead>
+					<tr>
+						<th>Title</th>
+                        <th>Assginee</th>
+						<th>Email</th>
+                        <th>Phone</th>
+						<th>Password</th>
+						<th>Priority</th>
+						<th>Actions</th>
+					</tr>
+				</thead>
+				<tbody>
+				</tbody>
+			</table>
+			<div class="clearfix">
+				<div class="hint-text">Showing <b>5</b> out of <b>25</b> entries</div>
+				<ul class="pagination">
+					<li class="page-item disabled"><a href="#">Previous</a></li>
+					<li class="page-item"><a href="#" class="page-link">1</a></li>
+					<li class="page-item"><a href="#" class="page-link">2</a></li>
+					<li class="page-item active"><a href="#" class="page-link">3</a></li>
+					<li class="page-item"><a href="#" class="page-link">4</a></li>
+					<li class="page-item"><a href="#" class="page-link">5</a></li>
+					<li class="page-item"><a href="#" class="page-link">Next</a></li>
+				</ul>
+			</div>
+		</div>
+	</div>        
+</div>
+<!-- Edit Modal HTML -->
+<div id="addEmployeeModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form>
+				<div class="modal-header">						
+					<h4 class="modal-title">Add Employee</h4>
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				</div>
+				<div class="modal-body">					
+					<div class="form-group">
+						<label>Name</label>
+						<input type="text" class="form-control" required>
+					</div>
+					<div class="form-group">
+						<label>Email</label>
+						<input type="email" class="form-control" required>
+					</div>
+					<div class="form-group">
+						<label>Address</label>
+						<textarea class="form-control" required></textarea>
+					</div>
+					<div class="form-group">
+						<label>Phone</label>
+						<input type="text" class="form-control" required>
+					</div>					
+				</div>
+				<div class="modal-footer">
+					<input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+					<input type="submit" class="btn btn-success" value="Add">
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<!-- Edit Modal HTML -->
+<div id="editEmployeeModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form>
+				<div class="modal-header">						
+					<h4 class="modal-title">Edit Employee</h4>
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				</div>
+				<div class="modal-body">					
+					<div class="form-group">
+						<label>Name</label>
+						<input type="text" class="form-control" required>
+					</div>
+					<div class="form-group">
+						<label>Email</label>
+						<input type="email" class="form-control" required>
+					</div>
+					<div class="form-group">
+						<label>Address</label>
+						<textarea class="form-control" required></textarea>
+					</div>
+					<div class="form-group">
+						<label>Phone</label>
+						<input type="text" class="form-control" required>
+					</div>					
+				</div>
+				<div class="modal-footer">
+					<input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+					<input type="submit" class="btn btn-info" value="Save">
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+<!-- Delete Modal HTML -->
+<div id="deleteEmployeeModal" class="modal fade">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form>
+				<div class="modal-header">						
+					<h4 class="modal-title">Delete Employee</h4>
+					<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				</div>
+				<div class="modal-body">					
+					<p>Are you sure you want to delete these Records?</p>
+					<p class="text-warning"><small>This action cannot be undone.</small></p>
+				</div>
+				<div class="modal-footer">
+					<input type="button" class="btn btn-default" data-dismiss="modal" value="Cancel">
+					<input type="submit" class="btn btn-danger" value="Delete">
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+</body>
+</html>
